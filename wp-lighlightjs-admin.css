@@ -1,0 +1,22 @@
+.hljs-style-item,
+.hljs_enable_item {
+  display: inline-block;
+  width: 200px;
+  line-height: 30px;
+  padding: 0 10px;
+  background: none;
+}
+
+.hljs-style-item:hover,
+.hljs-style-item:focus,
+.hljs-style-item.selected,
+.hljs_enable_item:hover,
+.hljs_enable_item:focus,
+.hljs_enable_item.selected {
+  font-weight: bold;
+  background: #ddd;
+}
+
+.hljs_enable_item {
+	width: 80px;
+}

@@ -1,0 +1,42 @@
+pre {
+  margin: 0;
+  padding: 0;
+}
+.hljs {
+  font-family: Menlo, 'Bitstream Vera Sans Mono', 'DejaVu Sans Mono', Monaco, Consolas, monospace;
+  font-size: 13px;
+}
+.hljs .line:before {
+  content: counter(lines);
+  text-align: right;
+  display: inline-block;
+  width: 2em;
+  padding-right: 0.5em;
+  margin-right: 0.5em;
+  color: #839496;
+  border-right: 1px solid #e0e0e0 !important;
+}
+.hljs .line {
+  counter-increment: lines;
+}
+.hljs > span.line-width-0:before {
+  width: 12px;
+}
+.hljs > span.line-width-1:before {
+  width: 18px;
+}
+.hljs > span.line-width-2:before {
+  width: 24px;
+}
+.hljs > span.line-width-3:before {
+  width: 30px;
+}
+.hljs > span.line-width-4:before {
+  width: 36px;
+}
+.hljs > span.line-width-5:before {
+  width: 42px;
+}
+.hljs > span.line-width-6:before {
+  width: 48px;
+}
