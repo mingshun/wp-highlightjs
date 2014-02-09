@@ -3,7 +3,7 @@ pre {
   padding: 0;
 }
 .hljs {
-  font-family: Menlo, 'Bitstream Vera Sans Mono', 'DejaVu Sans Mono', Monaco, Consolas, monospace;
+  font-family: Menlo, 'Bitstream Vera Sans Mono', 'DejaVu Sans Mono', Monaco, Consolas, "Microsoft Yahei UI", "Microsoft YaHei", SimHei, "\5B8B\4F53", monospace;
   font-size: 13px;
 }
 .hljs .line:before {
@@ -20,23 +20,23 @@ pre {
   counter-increment: lines;
 }
 .hljs > span.line-width-0:before {
-  width: 12px;
+  width: 20px;
 }
 .hljs > span.line-width-1:before {
-  width: 18px;
+  width: 27px;
 }
 .hljs > span.line-width-2:before {
-  width: 24px;
+  width: 34px;
 }
 .hljs > span.line-width-3:before {
-  width: 30px;
+  width: 41px;
 }
 .hljs > span.line-width-4:before {
-  width: 36px;
+  width: 48px;
 }
 .hljs > span.line-width-5:before {
-  width: 42px;
+  width: 55px;
 }
 .hljs > span.line-width-6:before {
-  width: 48px;
+  width: 62px;
 }
