@@ -526,6 +526,7 @@ var hljs = new function() {
     // Adds line numbers
     var class_name = block.className;
     if (class_name && class_name.indexOf('lineNumbers') != -1) {
+      var startNumber = class_name.match(/(?:|\s)*lineNumbers(?::([\d]*)|)/)[1];
       var lineCount = startNumber >= 0 ? parseInt(startNumber) + 1 : 1;
       for (var i = 0; i < text.length; ++i) {
         if (text.charCodeAt(i) == 10) {
@@ -540,9 +541,8 @@ var hljs = new function() {
       var lines = escape(text).replace(/^/gm, '<span class="line line-width-' + lineNumberColumnWidth + '"></span>');
       linesPre.innerHTML = lines;
       result.value = mergeStreams(nodeStream(linesPre), nodeStream(resultPre), text);
-      var startNumber = class_name.match(/(?:|\s)*lineNumbers(?::([\d]*)|)/)[1];
-      if (startNumber) {
-        block.style.counterReset = 'lines ' + startNumber;
+      if (startNumber > 1) {
+        block.style.counterReset = 'lines ' + (startNumber - 1);
       }
     }
 
