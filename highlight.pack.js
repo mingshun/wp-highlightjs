@@ -15,18 +15,6 @@ var hljs = new function() {
     return match && match.index == 0;
   }
 
-  function blockText(block) {
-    return Array.prototype.map.call(block.childNodes, function(node) {
-      if (node.nodeType == 3) {
-        return options.useBR ? node.nodeValue.replace(/\n/g, '') : node.nodeValue;
-      }
-      if (tag(node) == 'br') {
-        return '\n';
-      }
-      return blockText(node);
-    }).join('');
-  }
-
   function blockLanguage(block) {
     var classes = (block.className + ' ' + (block.parentNode ? block.parentNode.className : '')).split(/\s+/);
     classes = classes.map(function(c) {return c.replace(/^lang(uage)?-/, '');});
@@ -510,7 +498,9 @@ var hljs = new function() {
   two optional parameters for fixMarkup.
   */
   function highlightBlock(block) {
-    var text = blockText(block);
+    var text = options.useBR ? block.innerHTML
+      .replace(/\n/g,'').replace(/<br>|<br [^>]*>/g, '\n').replace(/<[^>]*>/g,'')
+      : block.textContent;
     var language = blockLanguage(block);
     if (language == 'no-highlight')
         return;
@@ -652,7 +642,7 @@ var hljs = new function() {
   };
   this.PHRASAL_WORDS_MODE = {
     begin: /\b(a|an|the|are|I|I'm|isn't|don't|doesn't|won't|but|just|should|pretty|simply|enough|gonna|going|wtf|so|such)\b/
-  }
+  };
   this.C_LINE_COMMENT_MODE = {
     className: 'comment',
     begin: '//', end: '$',
@@ -951,246 +941,244 @@ hljs.registerLanguage('d', /**
  */
 
 function(hljs) {
+  /**
+   * Language keywords
+   *
+   * @type {Object}
+   */
+  var D_KEYWORDS = {
+    keyword:
+      'abstract alias align asm assert auto body break byte case cast catch class ' +
+      'const continue debug default delete deprecated do else enum export extern final ' +
+      'finally for foreach foreach_reverse|10 goto if immutable import in inout int ' +
+      'interface invariant is lazy macro mixin module new nothrow out override package ' +
+      'pragma private protected public pure ref return scope shared static struct ' +
+      'super switch synchronized template this throw try typedef typeid typeof union ' +
+      'unittest version void volatile while with __FILE__ __LINE__ __gshared|10 ' +
+      '__thread __traits __DATE__ __EOF__ __TIME__ __TIMESTAMP__ __VENDOR__ __VERSION__',
+    built_in:
+      'bool cdouble cent cfloat char creal dchar delegate double dstring float function ' +
+      'idouble ifloat ireal long real short string ubyte ucent uint ulong ushort wchar ' +
+      'wstring',
+    literal:
+      'false null true'
+  };
 
-	/**
-	 * Language keywords
-	 *
-	 * @type {Object}
-	 */
-	var D_KEYWORDS = {
-		keyword:
-			'abstract alias align asm assert auto body break byte case cast catch class ' +
-			'const continue debug default delete deprecated do else enum export extern final ' +
-			'finally for foreach foreach_reverse|10 goto if immutable import in inout int ' +
-			'interface invariant is lazy macro mixin module new nothrow out override package ' +
-			'pragma private protected public pure ref return scope shared static struct ' +
-			'super switch synchronized template this throw try typedef typeid typeof union ' +
-			'unittest version void volatile while with __FILE__ __LINE__ __gshared|10 ' +
-			'__thread __traits __DATE__ __EOF__ __TIME__ __TIMESTAMP__ __VENDOR__ __VERSION__',
-		built_in:
-			'bool cdouble cent cfloat char creal dchar delegate double dstring float function ' +
-			'idouble ifloat ireal long real short string ubyte ucent uint ulong ushort wchar ' +
-			'wstring',
-		literal:
-			'false null true'
-	};
+  /**
+   * Number literal regexps
+   *
+   * @type {String}
+   */
+  var decimal_integer_re = '(0|[1-9][\\d_]*)',
+    decimal_integer_nosus_re = '(0|[1-9][\\d_]*|\\d[\\d_]*|[\\d_]+?\\d)',
+    binary_integer_re = '0[bB][01_]+',
+    hexadecimal_digits_re = '([\\da-fA-F][\\da-fA-F_]*|_[\\da-fA-F][\\da-fA-F_]*)',
+    hexadecimal_integer_re = '0[xX]' + hexadecimal_digits_re,
 
-	/**
-	 * Number literal regexps
-	 *
-	 * @type {String}
-	 */
-	var decimal_integer_re = '(0|[1-9][\\d_]*)',
-		decimal_integer_nosus_re = '(0|[1-9][\\d_]*|\\d[\\d_]*|[\\d_]+?\\d)',
-		binary_integer_re = '0[bB][01_]+',
-		hexadecimal_digits_re = '([\\da-fA-F][\\da-fA-F_]*|_[\\da-fA-F][\\da-fA-F_]*)',
-		hexadecimal_integer_re = '0[xX]' + hexadecimal_digits_re,
+    decimal_exponent_re = '([eE][+-]?' + decimal_integer_nosus_re + ')',
+    decimal_float_re = '(' + decimal_integer_nosus_re + '(\\.\\d*|' + decimal_exponent_re + ')|' +
+                '\\d+\\.' + decimal_integer_nosus_re + decimal_integer_nosus_re + '|' +
+                '\\.' + decimal_integer_re + decimal_exponent_re + '?' +
+              ')',
+    hexadecimal_float_re = '(0[xX](' +
+                  hexadecimal_digits_re + '\\.' + hexadecimal_digits_re + '|'+
+                  '\\.?' + hexadecimal_digits_re +
+                 ')[pP][+-]?' + decimal_integer_nosus_re + ')',
 
-		decimal_exponent_re = '([eE][+-]?' + decimal_integer_nosus_re + ')',
-		decimal_float_re = '(' + decimal_integer_nosus_re + '(\\.\\d*|' + decimal_exponent_re + ')|' +
-								'\\d+\\.' + decimal_integer_nosus_re + decimal_integer_nosus_re + '|' +
-								'\\.' + decimal_integer_re + decimal_exponent_re + '?' +
-							')',
-		hexadecimal_float_re = '(0[xX](' +
-									hexadecimal_digits_re + '\\.' + hexadecimal_digits_re + '|'+
-									'\\.?' + hexadecimal_digits_re +
-							   ')[pP][+-]?' + decimal_integer_nosus_re + ')',
+    integer_re = '(' +
+      decimal_integer_re + '|' +
+      binary_integer_re  + '|' +
+       hexadecimal_integer_re   +
+    ')',
 
-		integer_re = '(' +
-			decimal_integer_re + '|' +
-			binary_integer_re  + '|' +
-		 	hexadecimal_integer_re   +
-		')',
+    float_re = '(' +
+      hexadecimal_float_re + '|' +
+      decimal_float_re  +
+    ')';
 
-		float_re = '(' +
-			hexadecimal_float_re + '|' +
-			decimal_float_re  +
-		')';
+  /**
+   * Escape sequence supported in D string and character literals
+   *
+   * @type {String}
+   */
+  var escape_sequence_re = '\\\\(' +
+              '[\'"\\?\\\\abfnrtv]|' +  // common escapes
+              'u[\\dA-Fa-f]{4}|' +     // four hex digit unicode codepoint
+              '[0-7]{1,3}|' +       // one to three octal digit ascii char code
+              'x[\\dA-Fa-f]{2}|' +    // two hex digit ascii char code
+              'U[\\dA-Fa-f]{8}' +      // eight hex digit unicode codepoint
+              ')|' +
+              '&[a-zA-Z\\d]{2,};';      // named character entity
 
-	/**
-	 * Escape sequence supported in D string and character literals
-	 *
-	 * @type {String}
-	 */
-	var escape_sequence_re = '\\\\(' +
-							'[\'"\\?\\\\abfnrtv]|' +	// common escapes
-							'u[\\dA-Fa-f]{4}|' + 		// four hex digit unicode codepoint
-							'[0-7]{1,3}|' + 			// one to three octal digit ascii char code
-							'x[\\dA-Fa-f]{2}|' +		// two hex digit ascii char code
-							'U[\\dA-Fa-f]{8}' +			// eight hex digit unicode codepoint
-						  ')|' +
-						  '&[a-zA-Z\\d]{2,};';			// named character entity
+  /**
+   * D integer number literals
+   *
+   * @type {Object}
+   */
+  var D_INTEGER_MODE = {
+    className: 'number',
+      begin: '\\b' + integer_re + '(L|u|U|Lu|LU|uL|UL)?',
+      relevance: 0
+  };
 
+  /**
+   * [D_FLOAT_MODE description]
+   * @type {Object}
+   */
+  var D_FLOAT_MODE = {
+    className: 'number',
+    begin: '\\b(' +
+        float_re + '([fF]|L|i|[fF]i|Li)?|' +
+        integer_re + '(i|[fF]i|Li)' +
+      ')',
+    relevance: 0
+  };
 
-	/**
-	 * D integer number literals
-	 *
-	 * @type {Object}
-	 */
-	var D_INTEGER_MODE = {
-		className: 'number',
-    	begin: '\\b' + integer_re + '(L|u|U|Lu|LU|uL|UL)?',
-    	relevance: 0
-	};
+  /**
+   * D character literal
+   *
+   * @type {Object}
+   */
+  var D_CHARACTER_MODE = {
+    className: 'string',
+    begin: '\'(' + escape_sequence_re + '|.)', end: '\'',
+    illegal: '.'
+  };
 
-	/**
-	 * [D_FLOAT_MODE description]
-	 * @type {Object}
-	 */
-	var D_FLOAT_MODE = {
-		className: 'number',
-		begin: '\\b(' +
-				float_re + '([fF]|L|i|[fF]i|Li)?|' +
-				integer_re + '(i|[fF]i|Li)' +
-			')',
-		relevance: 0
-	};
+  /**
+   * D string escape sequence
+   *
+   * @type {Object}
+   */
+  var D_ESCAPE_SEQUENCE = {
+    begin: escape_sequence_re,
+    relevance: 0
+  };
 
-	/**
-	 * D character literal
-	 *
-	 * @type {Object}
-	 */
-	var D_CHARACTER_MODE = {
-		className: 'string',
-		begin: '\'(' + escape_sequence_re + '|.)', end: '\'',
-		illegal: '.'
-	};
+  /**
+   * D double quoted string literal
+   *
+   * @type {Object}
+   */
+  var D_STRING_MODE = {
+    className: 'string',
+    begin: '"',
+    contains: [D_ESCAPE_SEQUENCE],
+    end: '"[cwd]?'
+  };
 
-	/**
-	 * D string escape sequence
-	 *
-	 * @type {Object}
-	 */
-	var D_ESCAPE_SEQUENCE = {
-		begin: escape_sequence_re,
-		relevance: 0
-	}
+  /**
+   * D wysiwyg and delimited string literals
+   *
+   * @type {Object}
+   */
+  var D_WYSIWYG_DELIMITED_STRING_MODE = {
+    className: 'string',
+    begin: '[rq]"',
+    end: '"[cwd]?',
+    relevance: 5
+  };
 
-	/**
-	 * D double quoted string literal
-	 *
-	 * @type {Object}
-	 */
-	var D_STRING_MODE = {
-		className: 'string',
-		begin: '"',
-		contains: [D_ESCAPE_SEQUENCE],
-		end: '"[cwd]?'
-	};
+  /**
+   * D alternate wysiwyg string literal
+   *
+   * @type {Object}
+   */
+  var D_ALTERNATE_WYSIWYG_STRING_MODE = {
+    className: 'string',
+    begin: '`',
+    end: '`[cwd]?'
+  };
 
-	/**
-	 * D wysiwyg and delimited string literals
-	 *
-	 * @type {Object}
-	 */
-	var D_WYSIWYG_DELIMITED_STRING_MODE = {
-		className: 'string',
-		begin: '[rq]"',
-		end: '"[cwd]?',
-		relevance: 5
-	};
+  /**
+   * D hexadecimal string literal
+   *
+   * @type {Object}
+   */
+  var D_HEX_STRING_MODE = {
+    className: 'string',
+    begin: 'x"[\\da-fA-F\\s\\n\\r]*"[cwd]?',
+    relevance: 10
+  };
 
-	/**
-	 * D alternate wysiwyg string literal
-	 *
-	 * @type {Object}
-	 */
-	var D_ALTERNATE_WYSIWYG_STRING_MODE = {
-		className: 'string',
-		begin: '`',
-		end: '`[cwd]?'
-	};
+  /**
+   * D delimited string literal
+   *
+   * @type {Object}
+   */
+  var D_TOKEN_STRING_MODE = {
+    className: 'string',
+    begin: 'q"\\{',
+    end: '\\}"'
+  };
 
-	/**
-	 * D hexadecimal string literal
-	 *
-	 * @type {Object}
-	 */
-	var D_HEX_STRING_MODE = {
-		className: 'string',
-		begin: 'x"[\\da-fA-F\\s\\n\\r]*"[cwd]?',
-		relevance: 10
-	};
+  /**
+   * Hashbang support
+   *
+   * @type {Object}
+   */
+  var D_HASHBANG_MODE = {
+    className: 'shebang',
+    begin: '^#!',
+    end: '$',
+    relevance: 5
+  };
 
-	/**
-	 * D delimited string literal
-	 *
-	 * @type {Object}
-	 */
-	var D_TOKEN_STRING_MODE = {
-		className: 'string',
-		begin: 'q"\\{',
-		end: '\\}"'
-	};
+  /**
+   * D special token sequence
+   *
+   * @type {Object}
+   */
+  var D_SPECIAL_TOKEN_SEQUENCE_MODE = {
+    className: 'preprocessor',
+    begin: '#(line)',
+    end: '$',
+    relevance: 5
+  };
 
-	/**
-	 * Hashbang support
-	 *
-	 * @type {Object}
-	 */
-	var D_HASHBANG_MODE = {
-		className: 'shebang',
-		begin: '^#!',
-		end: '$',
-		relevance: 5
-	};
+  /**
+   * D attributes
+   *
+   * @type {Object}
+   */
+  var D_ATTRIBUTE_MODE = {
+    className: 'keyword',
+    begin: '@[a-zA-Z_][a-zA-Z_\\d]*'
+  };
 
-	/**
-	 * D special token sequence
-	 *
-	 * @type {Object}
-	 */
-	var D_SPECIAL_TOKEN_SEQUENCE_MODE = {
-		className: 'preprocessor',
-		begin: '#(line)',
-		end: '$',
-		relevance: 5
-	};
+  /**
+   * D nesting comment
+   *
+   * @type {Object}
+   */
+  var D_NESTING_COMMENT_MODE = {
+    className: 'comment',
+    begin: '\\/\\+',
+    contains: ['self'],
+    end: '\\+\\/',
+    relevance: 10
+  };
 
-	/**
-	 * D attributes
-	 *
-	 * @type {Object}
-	 */
-	var D_ATTRIBUTE_MODE = {
-		className: 'keyword',
-		begin: '@[a-zA-Z_][a-zA-Z_\\d]*'
-	};
-
-	/**
-	 * D nesting comment
-	 *
-	 * @type {Object}
-	 */
-	var D_NESTING_COMMENT_MODE = {
-		className: 'comment',
-		begin: '\\/\\+',
-		contains: ['self'],
-		end: '\\+\\/',
-		relevance: 10
-	}
-
-	return {
-		lexemes: hljs.UNDERSCORE_IDENT_RE,
-		keywords: D_KEYWORDS,
-		contains: [
-			hljs.C_LINE_COMMENT_MODE,
-  			hljs.C_BLOCK_COMMENT_MODE,
-  			D_NESTING_COMMENT_MODE,
-  			D_HEX_STRING_MODE,
-  			D_STRING_MODE,
-  			D_WYSIWYG_DELIMITED_STRING_MODE,
-  			D_ALTERNATE_WYSIWYG_STRING_MODE,
-  			D_TOKEN_STRING_MODE,
-  			D_FLOAT_MODE,
-  			D_INTEGER_MODE,
-  			D_CHARACTER_MODE,
-  			D_HASHBANG_MODE,
-  			D_SPECIAL_TOKEN_SEQUENCE_MODE,
-  			D_ATTRIBUTE_MODE
-		]
-	};
+  return {
+    lexemes: hljs.UNDERSCORE_IDENT_RE,
+    keywords: D_KEYWORDS,
+    contains: [
+      hljs.C_LINE_COMMENT_MODE,
+        hljs.C_BLOCK_COMMENT_MODE,
+        D_NESTING_COMMENT_MODE,
+        D_HEX_STRING_MODE,
+        D_STRING_MODE,
+        D_WYSIWYG_DELIMITED_STRING_MODE,
+        D_ALTERNATE_WYSIWYG_STRING_MODE,
+        D_TOKEN_STRING_MODE,
+        D_FLOAT_MODE,
+        D_INTEGER_MODE,
+        D_CHARACTER_MODE,
+        D_HASHBANG_MODE,
+        D_SPECIAL_TOKEN_SEQUENCE_MODE,
+        D_ATTRIBUTE_MODE
+    ]
+  };
 });
 
 hljs.registerLanguage('cpp', function(hljs) {
@@ -1619,7 +1607,7 @@ hljs.registerLanguage('applescript', function(hljs) {
   var COMMENTS = [
     {
       className: 'comment',
-      begin: '--', end: '$',
+      begin: '--', end: '$'
     },
     {
       className: 'comment',
@@ -2192,7 +2180,6 @@ function(hljs) {
 });
 
 hljs.registerLanguage('matlab', function(hljs) {
-
   var COMMON_CONTAINS = [
     hljs.C_NUMBER_MODE,
     {
@@ -2272,32 +2259,64 @@ hljs.registerLanguage('sql', function(hljs) {
     contains: [
       {
         className: 'operator',
-        begin: '\\b(begin|end|start|commit|rollback|savepoint|lock|alter|create|drop|rename|call|delete|do|handler|insert|load|replace|select|truncate|update|set|show|pragma|grant|merge)\\b(?!:)', // negative look-ahead here is specifically to prevent stomping on SmallTalk
-        end: ';', endsWithParent: true,
-        keywords: {
-          keyword: 'all partial global month current_timestamp using go revoke smallint ' +
-            'indicator end-exec disconnect zone with character assertion to add current_user ' +
-            'usage input local alter match collate real then rollback get read timestamp ' +
-            'session_user not integer bit unique day minute desc insert execute like ilike|2 ' +
-            'level decimal drop continue isolation found where constraints domain right ' +
-            'national some module transaction relative second connect escape close system_user ' +
-            'for deferred section cast current sqlstate allocate intersect deallocate numeric ' +
-            'public preserve full goto initially asc no key output collation group by union ' +
-            'session both last language constraint column of space foreign deferrable prior ' +
-            'connection unknown action commit view or first into float year primary cascaded ' +
-            'except restrict set references names table outer open select size are rows from ' +
-            'prepare distinct leading create only next inner authorization schema ' +
-            'corresponding option declare precision immediate else timezone_minute external ' +
-            'varying translation true case exception join hour default double scroll value ' +
-            'cursor descriptor values dec fetch procedure delete and false int is describe ' +
-            'char as at in varchar null trailing any absolute current_time end grant ' +
-            'privileges when cross check write current_date pad begin temporary exec time ' +
-            'update catalog user sql date on identity timezone_hour natural whenever interval ' +
-            'work order cascade diagnostics nchar having left call do handler load replace ' +
-            'truncate start lock show pragma exists number trigger if before after each row ' +
-            'merge matched database limit',
-          aggregate: 'count sum min max avg ifnull'
-        },
+        beginKeywords:
+          'begin end start commit rollback savepoint lock alter create drop rename call '+
+          'delete do handler insert load replace select truncate update set show pragma grant '+
+          'merge describe use explain help declare prepare execute deallocate savepoint release '+
+          'unlock purge reset change stop analyze cache flush optimize repair kill '+
+          'install uninstall checksum restore check backup',
+        end: /;/, endsWithParent: true,
+        keywords:
+          'abs absolute acos action add adddate addtime aes_decrypt aes_encrypt after aggregate all allocate alter ' +
+          'analyze and any are as asc ascii asin assertion at atan atan2 atn2 authorization authors avg backup ' +
+          'before begin benchmark between bin binary binlog bit bit_and bit_count bit_length bit_or bit_xor both by ' +
+          'cache call cascade cascaded case cast catalog ceil ceiling chain change changed char char_length ' +
+          'character character_length charindex charset check checksum checksum_agg choose close coalesce ' +
+          'coercibility collate collation collationproperty column columns columns_updated commit compress concat ' +
+          'concat_ws concurrent connect connection connection_id consistent constraint constraints continue ' +
+          'contributors conv convert convert_tz corresponding cos cot count count_big crc32 create cross cume_dist ' +
+          'curdate current current_date current_time current_timestamp current_user cursor curtime data database ' +
+          'databases datalength date date_add date_format date_sub dateadd datediff datefromparts datename ' +
+          'datepart datetime2fromparts datetimeoffsetfromparts day dayname dayofmonth dayofweek dayofyear ' +
+          'deallocate dec decimal declare decode default deferrable deferred degrees delayed delete des_decrypt ' +
+          'des_encrypt des_key_file desc describe descriptor diagnostics difference disconnect distinct ' +
+          'distinctrow div do domain double drop dumpfile each else elt enclosed encode encrypt end end-exec ' +
+          'engine engines eomonth errors escape escaped event eventdata events except exception exec execute ' +
+          'exists exp explain export_set extended external extract false fast fetch field fields find_in_set ' +
+          'first first_value float floor flush for force foreign format found found_rows from from_base64 ' +
+          'from_days from_unixtime full function get get_format get_lock getdate getutcdate global go goto grant ' +
+          'grants greatest group group_concat grouping grouping_id gtid_subset gtid_subtract handler having help ' +
+          'hex high_priority hosts hour ident_current ident_incr ident_seed identified identity if ifnull ignore ' +
+          'iif ilike immediate in index indicator inet6_aton inet6_ntoa inet_aton inet_ntoa infile initially inner ' +
+          'innodb input insert install instr int integer intersect interval into is is_free_lock is_ipv4 ' +
+          'is_ipv4_compat is_ipv4_mapped is_not is_not_null is_used_lock isdate isnull isolation join key kill ' +
+          'language last last_day last_insert_id last_value lcase lead leading least leaves left len lenght level ' +
+          'like limit lines ln load load_file local localtime localtimestamp locate lock log log10 log2 logfile ' +
+          'logs low_priority lower lpad ltrim make_set makedate maketime master master_pos_wait match matched max ' +
+          'md5 medium merge microsecond mid min minute mod mode module month monthname mutex name_const names ' +
+          'national natural nchar next no no_write_to_binlog not now null nullif number numeric nvarchar oct ' +
+          'octet_length of old_password on only open optimize option optionally or ord order outer outfile output ' +
+          'pad parse partial partition password patindex percent_rank percentile_cont percentile_disc period_add ' +
+          'period_diff pi plugin position pow power pragma precision prepare preserve primary prior privileges ' +
+          'procedure procedure_analyze processlist profile profiles public publishingservername purge quarter ' +
+          'query quick quote quotename radians rand read real references regexp relative relaylog release ' +
+          'release_lock rename repair repeat replace replicate reset restore restrict return returns reverse ' +
+          'revoke right rlike rollback rollup round row row_count rows rpad rtrim savepoint schema scroll ' +
+          'sec_to_time second section select serializable server session session_user set sha sha1 sha2 share ' +
+          'show sign sin size slave sleep smalldatetimefromparts smallint snapshot some soname soundex ' +
+          'sounds_like space sql sql_big_result sql_buffer_result sql_cache sql_calc_found_rows sql_no_cache ' +
+          'sql_small_result sql_variant_property sqlstate sqrt square start starting status std ' +
+          'stddev stddev_pop stddev_samp stdev stdevp stop str str_to_date straight_join strcmp string stuff ' +
+          'subdate substr substring subtime subtring_index sum switchoffset sysdate sysdatetime sysdatetimeoffset ' +
+          'system_user sysutcdatetime table tables tablespace tan temporary terminated tertiary_weights then time ' +
+          'time_format time_to_sec timediff timefromparts timestamp timestampadd timestampdiff timezone_hour ' +
+          'timezone_minute to to_base64 to_days to_seconds todatetimeoffset trailing transaction translation ' +
+          'trigger trigger_nestlevel triggers trim true truncate try_cast try_convert try_parse ucase uncompress ' +
+          'uncompressed_length unhex unicode uninstall union unique unix_timestamp unknown unlock update upgrade ' +
+          'upped upper usage use user user_resources using utc_date utc_time utc_timestamp uuid uuid_short ' +
+          'validate_password_strength value values var var_pop var_samp varchar variables variance varp varying ' +
+          'version view warnings week weekday weekofyear weight_string when whenever where with work write xml ' +
+          'xor year yearweek zon',
         contains: [
           {
             className: 'string',
@@ -2798,12 +2817,12 @@ hljs.registerLanguage('vbnet', function(hljs) {
 hljs.registerLanguage('oxygene', function(hljs) {
   var OXYGENE_KEYWORDS = 'abstract add and array as asc aspect assembly async begin break block by case class concat const copy constructor continue '+
     'create default delegate desc distinct div do downto dynamic each else empty end ensure enum equals event except exit extension external false '+
-	'final finalize finalizer finally flags for forward from function future global group has if implementation implements implies in index inherited'+
-	' inline interface into invariants is iterator join locked locking loop matching method mod module namespace nested new nil not notify nullable of '+
-	'old on operator or order out override parallel params partial pinned private procedure property protected public queryable raise read readonly '+
-	'record reintroduce remove repeat require result reverse sealed select self sequence set shl shr skip static step soft take then to true try tuple '+
-	'type union unit unsafe until uses using var virtual raises volatile where while with write xor yield await mapped deprecated stdcall cdecl pascal '+
-	'register safecall overload library platform reference packed strict published autoreleasepool selector strong weak unretained';
+    'final finalize finalizer finally flags for forward from function future global group has if implementation implements implies in index inherited '+
+    'inline interface into invariants is iterator join locked locking loop matching method mod module namespace nested new nil not notify nullable of '+
+    'old on operator or order out override parallel params partial pinned private procedure property protected public queryable raise read readonly '+
+    'record reintroduce remove repeat require result reverse sealed select self sequence set shl shr skip static step soft take then to true try tuple '+
+    'type union unit unsafe until uses using var virtual raises volatile where while with write xor yield await mapped deprecated stdcall cdecl pascal '+
+    'register safecall overload library platform reference packed strict published autoreleasepool selector strong weak unretained';
   var CURLY_COMMENT =  {
     className: 'comment',
     begin: '{', end: '}',
@@ -3456,7 +3475,6 @@ hljs.registerLanguage('ruleslanguage', function(hljs) {
 });
 
 hljs.registerLanguage('nsis', function(hljs) {
-
   var CONSTANTS = {
     className: 'symbol',
     begin: '\\$(ADMINTOOLS|APPDATA|CDBURN_AREA|CMDLINE|COMMONFILES32|COMMONFILES64|COMMONFILES|COOKIES|DESKTOP|DOCUMENTS|EXEDIR|EXEFILE|EXEPATH|FAVORITES|FONTS|HISTORY|HWNDPARENT|INSTDIR|INTERNET_CACHE|LANGUAGE|LOCALAPPDATA|MUSIC|NETHOOD|OUTDIR|PICTURES|PLUGINSDIR|PRINTHOOD|PROFILE|PROGRAMFILES32|PROGRAMFILES64|PROGRAMFILES|QUICKLAUNCH|RECENT|RESOURCES_LOCALIZED|RESOURCES|SENDTO|SMPROGRAMS|SMSTARTUP|STARTMENU|SYSDIR|TEMP|TEMPLATES|VIDEOS|WINDIR)'
@@ -3830,7 +3848,7 @@ hljs.registerLanguage('perl', function(hljs) {
     className: 'comment',
     begin: '^(__END__|__DATA__)', end: '\\n$',
     relevance: 5
-  }
+  };
   var STRING_CONTAINS = [hljs.BACKSLASH_ESCAPE, SUBST, VAR];
   var PERL_DEFAULT_CONTAINS = [
     VAR,
@@ -4166,7 +4184,7 @@ hljs.registerLanguage('elixir', function(hljs) {
   };
   var FUNCTION = {
     className: 'function',
-    beginKeywords: 'def defp defmacro defmacrop', end: /\bdo\b/,
+    beginKeywords: 'def defmacro', end: /\bdo\b/,
     contains: [
       hljs.inherit(hljs.TITLE_MODE, {
         begin: ELIXIR_METHOD_RE,
@@ -4385,8 +4403,9 @@ hljs.registerLanguage('protobuf', function(hljs) {
       },
       {
         className: 'function',
-        begin: /^\s*rpc\s+/, excludeBegin: true,
-        end: /\(/, excludeEnd: true
+        beginKeywords: 'rpc',
+        end: /;/, excludeEnd: true,
+        keywords: 'rpc returns'
       },
       {
         className: 'constant',
@@ -4879,7 +4898,6 @@ hljs.registerLanguage('fsharp', function(hljs) {
       'override private public rec return sig static struct then to ' +
       'true try type upcast use val void when while with yield',
     contains: [
-
       {
         className: 'string',
         begin: '@"', end: '"',
@@ -4913,7 +4931,7 @@ hljs.registerLanguage('fsharp', function(hljs) {
       hljs.inherit(hljs.QUOTE_STRING_MODE, {illegal: null}),
       hljs.C_NUMBER_MODE
     ]
-  }
+  };
 });
 
 hljs.registerLanguage('profile', function(hljs) {
@@ -5417,10 +5435,10 @@ hljs.registerLanguage('livecodeserver', function(hljs) {
       hljs.C_BLOCK_COMMENT_MODE,
       hljs.HASH_COMMENT_MODE,
       {
-        begin: '--',
+        begin: '--'
       },
       {
-        begin: '[^:]//',
+        begin: '[^:]//'
       }
     ]
   };
@@ -5653,7 +5671,7 @@ hljs.registerLanguage('markdown', function(hljs) {
           {
             className: 'link_reference',
             begin: '\\]\\[', end: '\\]',
-            excludeBegin: true, excludeEnd: true,
+            excludeBegin: true, excludeEnd: true
           }
         ],
         relevance: 10
@@ -5708,7 +5726,7 @@ hljs.registerLanguage('objectivec', function(hljs) {
   var LEXEMES = /[a-zA-Z@][a-zA-Z0-9_]*/;
   var CLASS_KEYWORDS = '@interface @class @protocol @implementation';
   return {
-    aliases: ['m', 'mm'],
+    aliases: ['m', 'mm', 'objc', 'obj-c'],
     keywords: OBJC_KEYWORDS, lexemes: LEXEMES,
     illegal: '</',
     contains: [
@@ -5825,7 +5843,7 @@ hljs.registerLanguage('makefile', function(hljs) {
     className: 'variable',
     begin: /\$\(/, end: /\)/,
     contains: [hljs.BACKSLASH_ESCAPE]
-  }
+  };
   return {
     aliases: ['mk', 'mak'],
     contains: [
@@ -5841,7 +5859,7 @@ hljs.registerLanguage('makefile', function(hljs) {
             relevance: 0,
             contains: [
               VARIABLE
-            ],
+            ]
           }
         }
       },
@@ -6038,7 +6056,7 @@ hljs.registerLanguage('vbscript', function(hljs) {
 hljs.registerLanguage('python', function(hljs) {
   var PROMPT = {
     className: 'prompt',  begin: /^(>>>|\.\.\.) /
-  }
+  };
   var STRING = {
     className: 'string',
     contains: [hljs.BACKSLASH_ESCAPE],
@@ -6062,10 +6080,10 @@ hljs.registerLanguage('python', function(hljs) {
         relevance: 10
       },
       {
-        begin: /(b|br)'/, end: /'/,
+        begin: /(b|br)'/, end: /'/
       },
       {
-        begin: /(b|br)"/, end: /"/,
+        begin: /(b|br)"/, end: /"/
       },
       hljs.APOS_STRING_MODE,
       hljs.QUOTE_STRING_MODE
@@ -6078,7 +6096,7 @@ hljs.registerLanguage('python', function(hljs) {
       {begin: '\\b(0o[0-7]+)[lLjJ]?'},
       {begin: hljs.C_NUMBER_RE + '[lLjJ]?'}
     ]
-  }
+  };
   var PARAMS = {
     className: 'params',
     begin: /\(/, end: /\)/,
