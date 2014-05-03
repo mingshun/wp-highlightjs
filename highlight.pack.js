@@ -1069,7 +1069,10 @@ hljs.registerLanguage('lasso', function(hljs) {
     },
     {
       className: 'attribute',
-      begin: '\\.\\.\\.|-' + hljs.UNDERSCORE_IDENT_RE
+      variants: [
+        {begin: '(\\.\\.\\.)' + hljs.UNDERSCORE_IDENT_RE},
+        {begin: '-' + hljs.UNDERSCORE_IDENT_RE, relevance: 0}
+      ]
     },
     {
       className: 'subst',
@@ -1666,7 +1669,7 @@ hljs.registerLanguage('erlang', function(hljs) {
   return {
     aliases: ['erl'],
     keywords: ERLANG_RESERVED,
-    illegal: '(</|\\*=|\\+=|-=|/=|/\\*|\\*/|\\(\\*|\\*\\))',
+    illegal: '(</|\\*=|\\+=|-=|/\\*|\\*/|\\(\\*|\\*\\))',
     contains: [
       {
         className: 'function',
@@ -1694,7 +1697,7 @@ hljs.registerLanguage('erlang', function(hljs) {
         keywords:
           '-module -record -undef -export -ifdef -ifndef -author -copyright -doc -vsn ' +
           '-import -include -include_lib -compile -define -else -endif -file -behaviour ' +
-          '-behavior',
+          '-behavior -spec',
         contains: [PARAMS]
       },
       NUMBER,
@@ -2548,8 +2551,8 @@ hljs.registerLanguage('perl', function(hljs) {
     className: 'variable',
     variants: [
       {begin: /\$\d/},
-      {begin: /[\$\%\@\*](\^\w\b|#\w+(\:\:\w+)*|{\w+}|\w+(\:\:\w*)*)/},
-      {begin: /[\$\%\@\*][^\s\w{]/, relevance: 0}
+      {begin: /[\$\%\@](\^\w\b|#\w+(\:\:\w+)*|{\w+}|\w+(\:\:\w*)*)/},
+      {begin: /[\$\%\@][^\s\w{]/, relevance: 0}
     ]
   };
   var COMMENT = {
@@ -3521,17 +3524,30 @@ hljs.registerLanguage('rust', function(hljs) {
   return {
     aliases: ['rs'],
     keywords:
-      'assert bool break char check claim comm const cont copy dir do drop ' +
-      'else enum extern export f32 f64 fail false float fn for i16 i32 i64 i8 ' +
-      'if impl int let log loop match mod move mut priv pub pure ref return ' +
-      'self static str struct task true trait type u16 u32 u64 u8 uint unsafe ' +
-      'use vec while',
+      'alignof as be box break const continue crate do else enum extern ' +
+      'false fn for if impl in let loop match mod mut offsetof once priv ' +
+      'proc pub pure ref return self sizeof static struct super trait true ' +
+      'type typeof unsafe unsized use virtual while yield ' +
+      'int i8 i16 i32 i64 ' +
+      'uint u8 u32 u64 ' +
+      'float f32 f64 ' +
+      'str char bool',
     illegal: '</',
     contains: [
       hljs.C_LINE_COMMENT_MODE,
       hljs.C_BLOCK_COMMENT_MODE,
       hljs.inherit(hljs.QUOTE_STRING_MODE, {illegal: null}),
-      hljs.APOS_STRING_MODE,
+      {
+        className: 'string',
+        begin: /r(#*)".*?"\1(?!#)/
+      },
+      {
+        className: 'string',
+        begin: /'\\?(x\w{2}|u\w{4}|U\w{8}|.)'/
+      },
+      {
+        begin: /'[a-zA-Z_][a-zA-Z0-9_]*/
+      },
       {
         className: 'number',
         begin: '\\b(0[xb][A-Za-z0-9_]+|[0-9_]+(\\.[0-9_]+)?([uif](8|16|32|64)?)?)',
@@ -3561,6 +3577,55 @@ hljs.registerLanguage('rust', function(hljs) {
       },
       {
         begin: '->'
+      }
+    ]
+  };
+});
+
+hljs.registerLanguage('capnproto', function(hljs) {
+  return {
+    aliases: ['capnp'],
+    keywords: {
+      keyword:
+        'struct enum interface union group import using const annotation extends in of on as with from fixed',
+      built_in:
+        'Void Bool Int8 Int16 Int32 Int64 UInt8 UInt16 UInt32 UInt64 Float32 Float64 ' +
+        'Text Data AnyPointer AnyStruct Capability List',
+      literal:
+        'true false'
+    },
+    contains: [
+      hljs.QUOTE_STRING_MODE,
+      hljs.NUMBER_MODE,
+      hljs.HASH_COMMENT_MODE,
+      {
+        className: 'shebang',
+        begin: /@0x[\w\d]{16};/,
+        illegal: /\n/
+      },
+      {
+        className: 'number',
+        begin: /@\d+\b/
+      },
+      {
+        className: 'class',
+        beginKeywords: 'struct enum', end: /\{/,
+        illegal: /\n/,
+        contains: [
+          hljs.inherit(hljs.TITLE_MODE, {
+            starts: {endsWithParent: true, excludeEnd: true} // hack: eating everything after the first title
+          })
+        ]
+      },
+      {
+        className: 'class',
+        beginKeywords: 'interface', end: /\{/,
+        illegal: /\n/,
+        contains: [
+          hljs.inherit(hljs.TITLE_MODE, {
+            starts: {endsWithParent: true, excludeEnd: true} // hack: eating everything after the first title
+          })
+        ]
       }
     ]
   };
@@ -3697,15 +3762,7 @@ hljs.registerLanguage('monkey', function(hljs) {
     ]
   }
 
-  var IDENT_TYPE_MODE =  {
-    className: 'built_in',
-    begin: ':', end: '=|' + hljs.UNDERSCORE_IDENT_RE + '\\b',
-    excludeBegin: true,
-    relevance: 0
-  }
-
   return {
-    aliases: ['monkey'],
     case_insensitive: true,
     keywords: {
       keyword: 'public private property continue exit extern new try catch ' +
@@ -3729,22 +3786,10 @@ hljs.registerLanguage('monkey', function(hljs) {
       },
       {
         className: 'function',
-        beginKeywords: 'function method', end: '[(=]|$',
+        beginKeywords: 'function method', end: '[(=:]|$',
+        illegal: /\n/,
         contains: [
           hljs.UNDERSCORE_TITLE_MODE,
-          IDENT_TYPE_MODE
-        ]
-      },
-      {
-        className: 'function',
-        beginKeywords: 'new', end: '[();]|$',
-        excludeEnd: true,
-        contains: [
-          {
-            className: 'built_in',
-            begin: hljs.UNDERSCORE_IDENT_RE,
-            relevance: 0
-          }
         ]
       },
       {
@@ -3779,7 +3824,6 @@ hljs.registerLanguage('monkey', function(hljs) {
         beginKeywords: 'alias', end: '=',
         contains: [hljs.UNDERSCORE_TITLE_MODE]
       },
-      IDENT_TYPE_MODE,
       hljs.QUOTE_STRING_MODE,
       NUMBER
     ]
@@ -4028,6 +4072,42 @@ hljs.registerLanguage('1c', function(hljs){
       },
       {className: 'preprocessor', begin: '#', end: '$'},
       {className: 'date', begin: '\'\\d{2}\\.\\d{2}\\.(\\d{2}|\\d{4})\''}
+    ]
+  };
+});
+
+hljs.registerLanguage('thrift', function(hljs) {
+  var BUILT_IN_TYPES = 'bool byte i16 i32 i64 double string binary';
+  return {
+    keywords: {
+      keyword:
+        'namespace const typedef struct enum service exception void oneway set list map required optional',
+      built_in:
+        BUILT_IN_TYPES,
+      literal:
+        'true false'
+    },
+    contains: [
+      hljs.QUOTE_STRING_MODE,
+      hljs.NUMBER_MODE,
+      hljs.C_LINE_COMMENT_MODE,
+      hljs.C_BLOCK_COMMENT_MODE,
+      {
+        className: 'class',
+        beginKeywords: 'struct enum service exception', end: /\{/,
+        illegal: /\n/,
+        contains: [
+          hljs.inherit(hljs.TITLE_MODE, {
+            starts: {endsWithParent: true, excludeEnd: true} // hack: eating everything after the first title
+          })
+        ]
+      },
+      {
+        className: 'stl_container',
+        begin: '\\b(set|list|map)\\s*<', end: '>',
+        keywords: BUILT_IN_TYPES,
+        contains: ['self']
+      }
     ]
   };
 });
@@ -5126,6 +5206,10 @@ hljs.registerLanguage('lisp', function(hljs) {
       }
     ]
   };
+  var QUOTED_ATOM = {
+    className: 'quoted',
+    begin: '\'' + LISP_IDENT_RE
+  };
   var LIST = {
     className: 'list',
     begin: '\\(', end: '\\)'
@@ -5135,7 +5219,7 @@ hljs.registerLanguage('lisp', function(hljs) {
     relevance: 0
   };
   LIST.contains = [{className: 'title', begin: LISP_IDENT_RE}, BODY];
-  BODY.contains = [QUOTED, LIST, LITERAL, NUMBER, STRING, COMMENT, VARIABLE, KEYWORD];
+  BODY.contains = [QUOTED, QUOTED_ATOM, LIST, LITERAL, NUMBER, STRING, COMMENT, VARIABLE, KEYWORD];
 
   return {
     illegal: /\S/,
@@ -5146,6 +5230,7 @@ hljs.registerLanguage('lisp', function(hljs) {
       STRING,
       COMMENT,
       QUOTED,
+      QUOTED_ATOM,
       LIST
     ]
   };
@@ -6585,7 +6670,6 @@ hljs.registerLanguage('cpp', function(hljs) {
         className: 'stl_container',
         begin: '\\b(deque|list|queue|stack|vector|map|set|bitset|multiset|multimap|unordered_map|unordered_set|unordered_multiset|unordered_multimap|array)\\s*<', end: '>',
         keywords: CPP_KEYWORDS,
-        relevance: 10,
         contains: ['self']
       },
       {
