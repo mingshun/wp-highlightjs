@@ -12,9 +12,9 @@ require_once('option-page.php');
 
 function hljs_style_scripts() {
   $settings = get_option(HLJS_SETTINGS);
-  $enable_on_home = $settings['enable_on_home'];
-  $enable_on_page = $settings['enable_on_page'];
-  $enable_on_post = $settings['enable_on_post'];
+  $enable_on_home = isset($settings['enable_on_home']) ? $settings['enable_on_home'] : false;
+  $enable_on_page = isset($settings['enable_on_page']) ? $settings['enable_on_page'] : false;
+  $enable_on_post = isset($settings['enable_on_post']) ? $settings['enable_on_post'] : false;
   $style = $settings['style'];
   $stylePath = plugins_url('styles/' . $style . '.css', __FILE__);
 

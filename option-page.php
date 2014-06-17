@@ -103,9 +103,9 @@ function hljs_admin_scripts() {
 
 function hljs_settings_page() {
   $settings = get_option(HLJS_SETTINGS);
-  $enable_on_home = $settings['enable_on_home'];
-  $enable_on_page = $settings['enable_on_page'];
-  $enable_on_post = $settings['enable_on_post'];
+  $enable_on_home = isset($settings['enable_on_home']) ? $settings['enable_on_home'] : false;
+  $enable_on_page = isset($settings['enable_on_page']) ? $settings['enable_on_page'] : false;
+  $enable_on_post = isset($settings['enable_on_post']) ? $settings['enable_on_post'] : false;
 ?>
 <a name="top"></a>
 <div class="wrap">
