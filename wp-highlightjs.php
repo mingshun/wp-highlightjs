@@ -28,4 +28,12 @@ function hljs_style_scripts() {
   }
 }
 add_action('wp_enqueue_scripts', 'hljs_style_scripts');
+
+
+function hljs_add_plugin_links($links) {
+  return array_merge(array(
+    '<a href="' . admin_url('options-general.php?page=wp-highlightjs') . '">设置</a>',
+  ), $links);
+}
+add_filter('plugin_action_links_' . plugin_basename(__FILE__), 'hljs_add_plugin_links');
 ?>
