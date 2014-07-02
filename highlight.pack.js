@@ -157,7 +157,7 @@ var hljs = new function() {
       if (mode.keywords) {
         var compiled_keywords = {};
 
-        function flatten(className, str) {
+        var flatten = function(className, str) {
           if (language.case_insensitive) {
             str = str.toLowerCase();
           }
@@ -165,7 +165,7 @@ var hljs = new function() {
             var pair = kw.split('|');
             compiled_keywords[pair[0]] = [className, pair[1] ? Number(pair[1]) : 1];
           });
-        }
+        };
 
         if (typeof mode.keywords == 'string') { // string
           flatten('keyword', mode.keywords);
@@ -1025,7 +1025,7 @@ hljs.registerLanguage('lasso', function(hljs) {
       className: 'markup',
       end: '\\[/noprocess\\]',
       returnEnd: true,
-      contains: [ HTML_COMMENT ]
+      contains: [HTML_COMMENT]
     }
   };
   var LASSO_START = {
@@ -1040,7 +1040,8 @@ hljs.registerLanguage('lasso', function(hljs) {
     hljs.C_LINE_COMMENT_MODE,
     {
       className: 'javadoc',
-      begin: '/\\*\\*!', end: '\\*/'
+      begin: '/\\*\\*!', end: '\\*/',
+      contains: [hljs.PHRASAL_WORDS_MODE]
     },
     hljs.C_BLOCK_COMMENT_MODE,
     hljs.inherit(hljs.C_NUMBER_MODE, {begin: hljs.C_NUMBER_RE + '|-?(infinity|nan)\\b'}),
@@ -1070,8 +1071,13 @@ hljs.registerLanguage('lasso', function(hljs) {
     {
       className: 'attribute',
       variants: [
-        {begin: '(\\.\\.\\.)' + hljs.UNDERSCORE_IDENT_RE},
-        {begin: '-' + hljs.UNDERSCORE_IDENT_RE, relevance: 0}
+        {
+          begin: '-' + hljs.UNDERSCORE_IDENT_RE,
+          relevance: 0
+        },
+        {
+          begin: '(\\.\\.\\.)'
+        }
       ]
     },
     {
@@ -1079,7 +1085,7 @@ hljs.registerLanguage('lasso', function(hljs) {
       variants: [
         {
           begin: '->\\s*',
-          contains: [ LASSO_DATAMEMBER ]
+          contains: [LASSO_DATAMEMBER]
         },
         {
           begin: ':=|/(?!\\w)=?|[-+*%=<>&|!?\\\\]+',
@@ -1091,7 +1097,7 @@ hljs.registerLanguage('lasso', function(hljs) {
       className: 'built_in',
       begin: '\\.\\.?',
       relevance: 0,
-      contains: [ LASSO_DATAMEMBER ]
+      contains: [LASSO_DATAMEMBER]
     },
     {
       className: 'class',
@@ -1117,7 +1123,7 @@ hljs.registerLanguage('lasso', function(hljs) {
           end: '\\[|' + LASSO_ANGLE_RE,
           returnEnd: true,
           relevance: 0,
-          contains: [ HTML_COMMENT ]
+          contains: [HTML_COMMENT]
         }
       },
       LASSO_NOPROCESS,
@@ -1138,7 +1144,7 @@ hljs.registerLanguage('lasso', function(hljs) {
                 className: 'markup',
                 end: LASSO_ANGLE_RE,
                 returnEnd: true,
-                contains: [ HTML_COMMENT ]
+                contains: [HTML_COMMENT]
               }
             },
             LASSO_NOPROCESS,
@@ -1412,7 +1418,7 @@ hljs.registerLanguage('lua', function(hljs) {
         className: 'string',
         begin: OPENING_LONG_BRACKET, end: CLOSING_LONG_BRACKET,
         contains: [LONG_BRACKETS],
-        relevance: 10
+        relevance: 5
       }
     ])
   };
@@ -1551,6 +1557,108 @@ hljs.registerLanguage('handlebars', function(hljs) {
           }
         ]
       }
+    ]
+  };
+});
+
+hljs.registerLanguage('swift', function(hljs) {
+  var SWIFT_KEYWORDS = {
+      keyword: 'class deinit enum extension func import init let protocol static ' +
+        'struct subscript typealias var break case continue default do ' +
+        'else fallthrough if in for return switch where while as dynamicType ' +
+        'is new super self Self Type __COLUMN__ __FILE__ __FUNCTION__ ' +
+        '__LINE__ associativity didSet get infix inout left mutating none ' +
+        'nonmutating operator override postfix precedence prefix right set '+
+        'unowned unowned safe unsafe weak willSet',
+      literal: 'true false nil',
+      built_in: 'abs advance alignof alignofValue assert bridgeFromObjectiveC ' +
+        'bridgeFromObjectiveCUnconditional bridgeToObjectiveC ' +
+        'bridgeToObjectiveCUnconditional c contains count countElements ' +
+        'countLeadingZeros debugPrint debugPrintln distance dropFirst dropLast dump ' +
+        'encodeBitsAsWords enumerate equal false filter find getBridgedObjectiveCType ' +
+        'getVaList indices insertionSort isBridgedToObjectiveC ' +
+        'isBridgedVerbatimToObjectiveC isUniquelyReferenced join ' +
+        'lexicographicalCompare map max maxElement min minElement nil numericCast ' +
+        'partition posix print println quickSort reduce reflect reinterpretCast ' +
+        'reverse roundUpToAlignment sizeof sizeofValue sort split startsWith strideof ' +
+        'strideofValue swap swift toString transcode true underestimateCount ' +
+        'unsafeReflect withExtendedLifetime withObjectAtPlusZero withUnsafePointer ' +
+        'withUnsafePointerToObject withUnsafePointers withVaList'
+    };
+
+  var TYPE = {
+    className: 'type',
+    begin: '\\b[A-Z][\\w\']*',
+    relevance: 0
+  };
+  var BLOCK_COMMENT = {
+    className: 'comment',
+    begin: '/\\*', end: '\\*/',
+    contains: [hljs.PHRASAL_WORDS_MODE, 'self']
+  };
+  var SUBST = {
+    className: 'subst',
+    begin: /\\\(/, end: '\\)',
+    keywords: SWIFT_KEYWORDS,
+    contains: [] // assigned later
+  };
+  var NUMBERS = {
+      className: 'number',
+      begin: '\\b([\\d_]+(\\.[\\deE_]+)?|0x[a-fA-F0-9_]+(\\.[a-fA-F0-9p_]+)?|0b[01_]+|0o[0-7_]+)\\b',
+      relevance: 0
+  };
+  var QUOTE_STRING_MODE = hljs.inherit(hljs.QUOTE_STRING_MODE, {
+    contains: [SUBST, hljs.BACKSLASH_ESCAPE]
+  });
+  SUBST.contains = [NUMBERS];
+
+  return {
+    keywords: SWIFT_KEYWORDS,
+    contains: [
+      QUOTE_STRING_MODE,
+      hljs.C_LINE_COMMENT_MODE,
+      BLOCK_COMMENT,
+      TYPE,
+      NUMBERS,
+      {
+        className: 'func',
+        beginKeywords: 'func', end: /(\{)|(\->)/, excludeEnd: true,
+        contains: [
+          hljs.inherit(hljs.TITLE_MODE, {begin: /[A-Za-z$_][0-9A-Za-z$_]*/}),
+          {
+            className: 'generics',
+            begin: /\</, end: /\>/,
+            illegal: /\>/
+          },
+          {
+            className: 'params',
+            begin: /\(/, end: /\)/,
+            contains: [
+              hljs.C_LINE_COMMENT_MODE,
+              hljs.C_BLOCK_COMMENT_MODE
+            ],
+            illegal: /["'\(]/
+          }
+        ],
+        illegal: /\[|%/
+      },
+      {
+        className: 'class',
+        keywords: 'struct protocol class extension enum',
+        begin: '(struct|protocol|class(?! (func|var))|extension|enum)', 
+        end: '\\{',
+        excludeEnd: true,
+        contains: [
+          hljs.inherit(hljs.TITLE_MODE, {begin: /[A-Za-z$_][0-9A-Za-z$_]*/})
+        ]
+      },
+      {
+        className: 'preprocessor', // @attributes
+        begin: '(@assignment|@class_protocol|@exported|@final|@lazy|@noreturn|' +
+                  '@NSCopying|@NSManaged|@objc|@optional|@required|@auto_closure|' +
+                  '@noreturn|@IBAction|@IBDesignable|@IBInspectable|@IBOutlet|' +
+                  '@infix|@prefix|@postfix)'
+      },
     ]
   };
 });
@@ -3052,14 +3160,16 @@ hljs.registerLanguage('objectivec', function(hljs) {
       'unsigned long volatile static bool mutable if do return goto void ' +
       'enum else break extern asm case short default double register explicit ' +
       'signed typename this switch continue wchar_t inline readonly assign ' +
-      'self synchronized id ' +
-      'nonatomic super unichar IBOutlet IBAction strong weak ' +
+      'readwrite self @synchronized id typeof ' +
+      'nonatomic super unichar IBOutlet IBAction strong weak copy ' +
+      'in out inout bycopy byref oneway __strong __weak __block __autoreleasing ' +
       '@private @protected @public @try @property @end @throw @catch @finally ' +
-      '@synthesize @dynamic @selector @optional @required',
+      '@autoreleasepool @synthesize @dynamic @selector @optional @required',
     literal:
     	'false true FALSE TRUE nil YES NO NULL',
     built_in:
       'NSString NSDictionary CGRect CGPoint UIButton UILabel UITextView UIWebView MKMapView ' +
+      'NSView NSViewController NSWindow NSWindowController NSSet NSUUID NSIndexSet ' +
       'UISegmentedControl NSObject UITableViewDelegate UITableViewDataSource NSThread ' +
       'UIActivityIndicator UITabbar UIToolBar UIBarButtonItem UIImageView NSAutoreleasePool ' +
       'UITableView BOOL NSInteger CGFloat NSException NSLog NSMutableString NSMutableArray ' +
@@ -3086,32 +3196,31 @@ hljs.registerLanguage('objectivec', function(hljs) {
       hljs.QUOTE_STRING_MODE,
       {
         className: 'string',
-        begin: '\'',
-        end: '[^\\\\]\'',
-        illegal: '[^\\\\][^\']'
-      },
-
-      {
-        className: 'preprocessor',
-        begin: '#import',
-        end: '$',
-        contains: [
-        {
-          className: 'title',
-          begin: '\"',
-          end: '\"'
-        },
-        {
-          className: 'title',
-          begin: '<',
-          end: '>'
-        }
+        variants: [
+          {
+            begin: '@"', end: '"',
+            illegal: '\\n',
+            contains: [hljs.BACKSLASH_ESCAPE]
+          },
+          {
+            begin: '\'', end: '[^\\\\]\'',
+            illegal: '[^\\\\][^\']'
+          }
         ]
       },
       {
         className: 'preprocessor',
         begin: '#',
-        end: '$'
+        end: '$',
+        contains: [
+          {
+            className: 'title',
+            variants: [
+              { begin: '\"', end: '\"' },
+              { begin: '<', end: '>' }
+            ]
+          }
+        ]
       },
       {
         className: 'class',
@@ -3354,6 +3463,93 @@ hljs.registerLanguage('r', function(hljs) {
   };
 });
 
+hljs.registerLanguage('typescript', function(hljs) {
+  return {
+    aliases: ['ts'],
+    keywords: {
+      keyword:
+        'in if for while finally var new function|0 do return void else break catch ' +
+        'instanceof with throw case default try this switch continue typeof delete ' +
+        'let yield const class public private get set super interface extends' +
+        'static constructor implements enum export import declare',
+      literal:
+        'true false null undefined NaN Infinity',
+      built_in:
+        'eval isFinite isNaN parseFloat parseInt decodeURI decodeURIComponent ' +
+        'encodeURI encodeURIComponent escape unescape Object Function Boolean Error ' +
+        'EvalError InternalError RangeError ReferenceError StopIteration SyntaxError ' +
+        'TypeError URIError Number Math Date String RegExp Array Float32Array ' +
+        'Float64Array Int16Array Int32Array Int8Array Uint16Array Uint32Array ' +
+        'Uint8Array Uint8ClampedArray ArrayBuffer DataView JSON Intl arguments require ' +
+        'module console window document any number boolean string void',
+    },
+    contains: [
+      {
+        className: 'pi',
+        begin: /^\s*('|")use strict('|")/,
+        relevance: 0
+      },
+      hljs.APOS_STRING_MODE,
+      hljs.QUOTE_STRING_MODE,
+      hljs.C_LINE_COMMENT_MODE,
+      hljs.C_BLOCK_COMMENT_MODE,
+      hljs.C_NUMBER_MODE,
+      { // "value" container
+        begin: '(' + hljs.RE_STARTERS_RE + '|\\b(case|return|throw)\\b)\\s*',
+        keywords: 'return throw case',
+        contains: [
+          hljs.C_LINE_COMMENT_MODE,
+          hljs.C_BLOCK_COMMENT_MODE,
+          hljs.REGEXP_MODE,
+          { // E4X
+            begin: /</, end: />;/,
+            relevance: 0,
+            subLanguage: 'xml'
+          }
+        ],
+        relevance: 0
+      },
+      {
+        className: 'function',
+        beginKeywords: 'function', end: /\{/, excludeEnd: true,
+        contains: [
+          hljs.inherit(hljs.TITLE_MODE, {begin: /[A-Za-z$_][0-9A-Za-z$_]*/}),
+          {
+            className: 'params',
+            begin: /\(/, end: /\)/,
+            contains: [
+              hljs.C_LINE_COMMENT_MODE,
+              hljs.C_BLOCK_COMMENT_MODE
+            ],
+            illegal: /["'\(]/
+          }
+        ],
+        illegal: /\[|%/,
+        relevance: 0 // () => {} is more typical in TypeScript
+      },
+      {
+        className: 'constructor',
+        beginKeywords: 'constructor', end: /\{/, excludeEnd: true,
+        relevance: 10
+      },
+      {
+        className: 'module',
+        beginKeywords: 'module', end: /\{/, excludeEnd: true,
+      },
+      {
+        className: 'interface',
+        beginKeywords: 'interface', end: /\{/, excludeEnd: true,
+      },
+      {
+        begin: /\$[(.]/ // relevance booster for a pattern common to JS libs: `$(something)` and `$.something`
+      },
+      {
+        begin: '\\.' + hljs.IDENT_RE, relevance: 0 // hack: prevents detection of keywords after dots
+      }
+    ]
+  };
+});
+
 hljs.registerLanguage('cs', function(hljs) {
   var KEYWORDS =
     // Normal keywords.
@@ -3367,6 +3563,7 @@ hljs.registerLanguage('cs', function(hljs) {
     'ascending descending from get group into join let orderby partial select set value var ' +
     'where yield';
   return {
+    aliases: ['csharp'],
     keywords: KEYWORDS,
     illegal: /::/,
     contains: [
@@ -4114,7 +4311,7 @@ hljs.registerLanguage('thrift', function(hljs) {
 
 hljs.registerLanguage('php', function(hljs) {
   var VARIABLE = {
-    className: 'variable', begin: '\\$+[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*'
+    className: 'variable', begin: '(\\$|->)+[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*'
   };
   var PREPROCESSOR = {
     className: 'preprocessor', begin: /<\?(php)?|\?>/
@@ -5130,7 +5327,7 @@ hljs.registerLanguage('java', function(hljs) {
           {
             className: 'class',
             beginKeywords: 'class interface', endsWithParent: true, excludeEnd: true,
-            illegal: /[:"<>]/,
+            illegal: /[:"\[\]]/,
             contains: [
               {
                 beginKeywords: 'extends implements',
@@ -5232,6 +5429,67 @@ hljs.registerLanguage('lisp', function(hljs) {
       QUOTED,
       QUOTED_ATOM,
       LIST
+    ]
+  };
+});
+
+hljs.registerLanguage('haxe', function(hljs) {
+  var IDENT_RE = '[a-zA-Z_$][a-zA-Z0-9_$]*';
+  var IDENT_FUNC_RETURN_TYPE_RE = '([*]|[a-zA-Z_$][a-zA-Z0-9_$]*)';
+
+  return {
+    aliases: ['hx'],
+    keywords: {
+      keyword: 'break callback case cast catch class continue default do dynamic else enum extends extern ' +
+		'for function here if implements import in inline interface never new override package private ' + 
+		'public return static super switch this throw trace try typedef untyped using var while',
+      literal: 'true false null'
+    },
+    contains: [
+      hljs.APOS_STRING_MODE,
+      hljs.QUOTE_STRING_MODE,
+      hljs.C_LINE_COMMENT_MODE,
+      hljs.C_BLOCK_COMMENT_MODE,
+      hljs.C_NUMBER_MODE,
+      {
+        className: 'class',
+        beginKeywords: 'class interface', end: '{', excludeEnd: true,
+        contains: [
+          {
+            beginKeywords: 'extends implements'
+          },
+          hljs.TITLE_MODE
+        ]
+      },
+      {
+        className: 'preprocessor',
+        begin: '#', end: '$',
+        keywords: 'if else elseif end error'
+      },
+      {
+        className: 'function',
+        beginKeywords: 'function', end: '[{;]', excludeEnd: true,
+        illegal: '\\S',
+        contains: [
+          hljs.TITLE_MODE,
+          {
+            className: 'params',
+            begin: '\\(', end: '\\)',
+            contains: [
+              hljs.APOS_STRING_MODE,
+              hljs.QUOTE_STRING_MODE,
+              hljs.C_LINE_COMMENT_MODE,
+              hljs.C_BLOCK_COMMENT_MODE
+            ]
+          },
+          {
+            className: 'type',
+            begin: ':',
+            end: IDENT_FUNC_RETURN_TYPE_RE,
+            relevance: 10
+          }
+        ]
+      }
     ]
   };
 });
@@ -6312,6 +6570,41 @@ hljs.registerLanguage('diff', function(hljs) {
   };
 });
 
+hljs.registerLanguage('gradle', function(hljs) {
+  return {
+    case_insensitive: true,
+    keywords: {
+      keyword:
+        'task project allprojects subprojects artifacts buildscript configurations ' +
+        'dependencies repositories sourceSets description delete from into include ' +
+        'exclude source classpath destinationDir includes options sourceCompatibility ' +
+        'targetCompatibility group flatDir doLast doFirst flatten todir fromdir ant ' +
+        'def abstract break case catch continue default do else extends final finally ' +
+        'for if implements instanceof native new private protected public return static ' +
+        'switch synchronized throw throws transient try volatile while strictfp package ' +
+        'import false null super this true antlrtask checkstyle codenarc copy boolean ' +
+        'byte char class double float int interface long short void compile runTime ' +
+        'file fileTree abs any append asList asWritable call collect compareTo count ' +
+        'div dump each eachByte eachFile eachLine every find findAll flatten getAt ' +
+        'getErr getIn getOut getText grep immutable inject inspect intersect invokeMethods ' +
+        'isCase join leftShift minus multiply newInputStream newOutputStream newPrintWriter ' +
+        'newReader newWriter next plus pop power previous print println push putAt read ' +
+        'readBytes readLines reverse reverseEach round size sort splitEachLine step subMap ' +
+        'times toInteger toList tokenize upto waitForOrKill withPrintWriter withReader ' +
+        'withStream withWriter withWriterAppend write writeLine'
+    },
+    contains: [    
+      hljs.C_LINE_COMMENT_MODE,
+      hljs.C_BLOCK_COMMENT_MODE,
+      hljs.APOS_STRING_MODE,
+      hljs.QUOTE_STRING_MODE,
+      hljs.NUMBER_MODE,
+      hljs.REGEXP_MODE
+
+    ]
+  }
+});
+
 hljs.registerLanguage('actionscript', function(hljs) {
   var IDENT_RE = '[a-zA-Z_$][a-zA-Z0-9_$]*';
   var IDENT_FUNC_RETURN_TYPE_RE = '([*]|[a-zA-Z_$][a-zA-Z0-9_$]*)';
@@ -6914,4 +7207,59 @@ hljs.registerLanguage('asciidoc', function(hljs) {
       }
     ]
   };
+});
+
+hljs.registerLanguage('nimrod', function(hljs) {
+  return {
+    keywords: {
+      keyword: 'addr and as asm bind block break|0 case|0 cast const|0 continue|0 converter discard distinct|10 div do elif else|0 end|0 enum|0 except export finally for from generic if|0 import|0 in include|0 interface is isnot|10 iterator|10 let|0 macro method|10 mixin mod nil not notin|10 object|0 of or out proc|10 ptr raise ref|10 return shl shr static template|10 try|0 tuple type|0 using|0 var|0 when while|0 with without xor yield',
+      literal: 'shared guarded stdin stdout stderr result|10 true false'
+    },
+    contains: [ {
+        className: 'decorator', // Actually pragma
+        begin: /{\./,
+        end: /\.}/,
+        relevance: 10
+      }, {
+        className: 'string',
+        begin: /[a-zA-Z]\w*"/,
+        end: /"/,
+        contains: [{begin: /""/}]
+      }, {
+        className: 'string',
+        begin: /([a-zA-Z]\w*)?"""/,
+        end: /"""/
+      }, {
+        className: 'string',
+        begin: /"/,
+        end: /"/,
+        illegal: /\n/,
+        contains: [{begin: /\\./}]
+      }, {
+        className: 'type',
+        begin: /\b[A-Z]\w+\b/,
+        relevance: 0
+      }, {
+        className: 'type',
+        begin: /\b(int|int8|int16|int32|int64|uint|uint8|uint16|uint32|uint64|float|float32|float64|bool|char|string|cstring|pointer|expr|stmt|void|auto|any|range|array|openarray|varargs|seq|set|clong|culong|cchar|cschar|cshort|cint|csize|clonglong|cfloat|cdouble|clongdouble|cuchar|cushort|cuint|culonglong|cstringarray|semistatic)\b/
+      }, {
+        className: 'number',
+        begin: /\b(0[xX][0-9a-fA-F][_0-9a-fA-F]*)('?[iIuU](8|16|32|64))?/,
+        relevance: 0
+      }, {
+        className: 'number',
+        begin: /\b(0o[0-7][_0-7]*)('?[iIuUfF](8|16|32|64))?/,
+        relevance: 0
+      }, {
+        className: 'number',
+        begin: /\b(0(b|B)[01][_01]*)('?[iIuUfF](8|16|32|64))?/,
+        relevance: 0
+      }, {
+        className: 'number',
+        begin: /\b(\d[_\d]*)('?[iIuUfF](8|16|32|64))?/,
+        relevance: 0
+      },
+      hljs.HASH_COMMENT_MODE
+    ]
+  }
 });
